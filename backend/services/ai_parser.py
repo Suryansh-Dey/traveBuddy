@@ -24,6 +24,8 @@ Return ONLY valid JSON in this format:
   "transport_modes": list of ["flight", "train", "bus"]
 }}
 
+If any field is missing or unclear, do write a best guess or use defaults
+
 Rules:
 - If transport not specified → include all
 - Convert relative time (like "next weekend") into days from now

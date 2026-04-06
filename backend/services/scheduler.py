@@ -29,7 +29,7 @@ async def run_trip(trip_id):
         user_address = trip["contract"]["user_address"]
         
         if decision["decision"] == "EXECUTE":
-            #call_app(app_id, user_address, [b"approve"])   # this function neeeds app_id but there seems to an issue with the deploy contract logic which is causing the issue
+            call_app(app_id, user_address, ["approve"])
             execute_booking(trip_id, components)
             break
 
