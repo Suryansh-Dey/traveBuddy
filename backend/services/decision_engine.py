@@ -1,6 +1,7 @@
 from dotenv import load_dotenv
 load_dotenv()
 
+# Should we go for ML to analysis trend
 
 def evaluate(constraints, components, price_history):
     budget = constraints["budget"]

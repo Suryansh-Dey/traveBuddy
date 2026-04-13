@@ -17,7 +17,19 @@ class Component(BaseModel):
     mode: str
     price: int
 
+
+class ContractState(BaseModel):
+    app_id: int
+    app_address: str
+    create_tx_id: str
+    lock_tx_id: str
+    lock_amount: int
+    user_address: str
+    receiver_address: str
+    release_tx_id: Optional[str] = None
+
 class TripState(BaseModel):
     trip_id: str
     constraints: Constraint
     status: str  # PENDING, ACTIVE, EXECUTED
+    contract: Optional[ContractState] = None

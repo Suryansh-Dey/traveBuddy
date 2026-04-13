@@ -32,6 +32,7 @@ async def create_trip(data: dict):
         user_address = data.get("user_address") or os.getenv("USER_ADDRESS")
         if not user_address:
             raise HTTPException(status_code=400, detail="Missing user_address (request or USER_ADDRESS env)")
+        booking_receiver_address = data.get("booking_receiver_address") or os.getenv("BOOKING_RECEIVER_ADDRESS") or user_address
         print(f"User Address: {user_address}")
         #user_address = "DUmmt"
 
@@ -43,8 +44,14 @@ async def create_trip(data: dict):
 
         # 🔹 Step 4: Lock funds (blockchain stub)
         # contract = lock_funds(user_id, constraints["budget"])
-        
-        contract = deploy_contract(user_address) # this line is causing the internal server error
+
+        contract = deploy_contract(
+            user_address=user_address,
+            budget=constraints["budget"],
+            trip_id=constraints["trip_id"],
+            receiver_address=booking_receiver_address,
+            deadline=constraints["deadline"],
+        )
         #contract = {"app_id": 12345}
 
         # 🔹 Step 5: Store state
@@ -53,7 +60,12 @@ async def create_trip(data: dict):
             "status": "ACTIVE",
             "contract": {
                 "app_id": contract["app_id"],
-                "user_address": user_address
+                "app_address": contract["app_address"],
+                "create_tx_id": contract["create_tx_id"],
+                "lock_tx_id": contract["lock_tx_id"],
+                "lock_amount": contract["lock_amount"],
+                "user_address": user_address,
+                "receiver_address": contract["receiver_address"],
             }
         }
 
@@ -69,7 +81,12 @@ async def create_trip(data: dict):
             "parsed": parsed,  # useful for debugging
             "contract": {
                 "app_id": contract["app_id"],
-                "user_address": user_address
+                "app_address": contract["app_address"],
+                "create_tx_id": contract["create_tx_id"],
+                "lock_tx_id": contract["lock_tx_id"],
+                "lock_amount": contract["lock_amount"],
+                "user_address": user_address,
+                "receiver_address": contract["receiver_address"],
             }
         }
 

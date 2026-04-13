@@ -60,6 +60,8 @@ def extract_json(text: str):
 load_dotenv()
 
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+print("Gemini API Key loaded:", os.getenv("GEMINI_API_KEY"))
+
 
 model = genai.GenerativeModel("gemini-2.5-flash")
 
@@ -103,10 +105,10 @@ def parse_query_llm(query: str):
         print("❌ LLM parsing failed:", e)
         print("Raw response:", raw_text)
 
-        # 🔹 Strong fallback
+        # Strong fallback
         return {
-            "destination": "Goa",
-            "budget": 10000,
+            "destination": "Nowhere",
+            "budget": 000,
             "deadline": int((datetime.now() + timedelta(days=7)).timestamp()),
             "transport_modes": ["flight", "train"]
         }

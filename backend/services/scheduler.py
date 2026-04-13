@@ -4,7 +4,7 @@ from services.api_fetcher import fetch_prices
 from services.decision_engine import evaluate
 from services.booking_executor import execute_booking
 from store.db import PRICE_HISTORY, TRIPS
-from services.contract_service import call_app
+from services.contract_service import release_funds
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -30,8 +30,11 @@ async def run_trip(trip_id):
         user_address = trip["contract"]["user_address"]
         
         if decision["decision"] == "EXECUTE":
-            call_app(app_id, user_address, ["approve"])
-            execute_booking(trip_id, components)
-            break
+            booking_success = execute_booking(trip_id, components)
+            if booking_success:
+                release_tx_id = release_funds(app_id, user_address)
+                trip["status"] = "BOOKED"
+                trip["contract"]["release_tx_id"] = release_tx_id
+                break
 
         await asyncio.sleep(5)  # polling interval

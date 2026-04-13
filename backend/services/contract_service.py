@@ -1,12 +1,13 @@
-from algosdk import transaction
-from algosdk import mnemonic
-from algosdk.transaction import ApplicationCreateTxn
+from algosdk import encoding, logic, mnemonic, transaction
+from algosdk.transaction import ApplicationCreateTxn, ApplicationNoOpTxn, PaymentTxn
 from services.algorand_client import algod_client
 from services.contract_utils import approval_program, clear_program, compile_program
 import os
 from dotenv import load_dotenv
-from algosdk.transaction import ApplicationNoOpTxn
 load_dotenv()  # Load environment variables from .env file
+
+
+APP_ACCOUNT_MIN_BALANCE = 100_000
 
 
 def _get_private_key():
@@ -21,11 +22,50 @@ def _get_private_key():
     raise ValueError("Missing USER_PRIVATE_KEY or USER_MNEMONIC in environment")
 
 
-def call_app(app_id, sender, args):
+def _suggested_params(fee_multiplier=1):
+    params = algod_client.suggested_params()
+    params.flat_fee = True
+    params.fee = params.min_fee * fee_multiplier
+    return params
+
+
+def _sign_transaction(txn):
+    private_key = _get_private_key()
+    return txn.sign(private_key)
+
+
+def _submit_transaction(txn):
+    signed_txn = _sign_transaction(txn)
+    tx_id = algod_client.send_transaction(signed_txn)
+    confirmation = transaction.wait_for_confirmation(algod_client, tx_id, 4)
+    return tx_id, confirmation
+
+
+def _submit_group(txns):
+    signed_txns = [_sign_transaction(txn) for txn in txns]
+    tx_id = algod_client.send_transactions(signed_txns)
+    confirmation = transaction.wait_for_confirmation(algod_client, tx_id, 4)
+    return tx_id, confirmation
+
+
+def _encode_uint64(value):
+    value = int(value)
+    if value < 0:
+        raise ValueError("uint64 value cannot be negative")
+    return value.to_bytes(8, "big")
+
+
+def _encode_address(address):
+    if not encoding.is_valid_address(address):
+        raise ValueError(f"Invalid Algorand address: {address}")
+    return encoding.decode_address(address)
+
+
+def call_app(app_id, sender, args, fee_multiplier=1):
     if not sender:
         raise ValueError("sender address is required")
 
-    params = algod_client.suggested_params()
+    params = _suggested_params(fee_multiplier=fee_multiplier)
 
     app_args = []
     for arg in args or []:
@@ -38,20 +78,64 @@ def call_app(app_id, sender, args):
         app_args=app_args
     )
 
-    private_key = _get_private_key()
-    signed_txn = txn.sign(private_key)
-
-    tx_id = algod_client.send_transaction(signed_txn)
-    transaction.wait_for_confirmation(algod_client, tx_id, 4)
-
+    tx_id, _ = _submit_transaction(txn)
     return tx_id
 
 
-def deploy_contract(user_address):
+def lock_funds(app_id, sender, amount):
+    if amount <= 0:
+        raise ValueError("amount must be greater than zero")
+
+    app_address = logic.get_application_address(app_id)
+    params = _suggested_params()
+
+    payment_txn = PaymentTxn(
+        sender=sender,
+        sp=params,
+        receiver=app_address,
+        amt=amount,
+    )
+    app_call_txn = ApplicationNoOpTxn(
+        sender=sender,
+        sp=params,
+        index=app_id,
+        app_args=[b"lock"],
+    )
+
+    group_id = transaction.calculate_group_id([payment_txn, app_call_txn])
+    payment_txn.group = group_id
+    app_call_txn.group = group_id
+
+    tx_id, _ = _submit_group([payment_txn, app_call_txn])
+    return {
+        "lock_tx_id": tx_id,
+        "app_address": app_address,
+    }
+
+
+def release_funds(app_id, sender):
+    return call_app(app_id, sender, ["release"], fee_multiplier=2)
+
+
+def refund_funds(app_id, sender):
+    return call_app(app_id, sender, ["refund"], fee_multiplier=2)
+
+
+def deploy_contract(user_address, budget, trip_id, receiver_address=None, deadline=None):
     if not user_address:
         raise ValueError("user_address is required to deploy contract")
+    if budget is None:
+        raise ValueError("budget is required to deploy contract")
+    if not trip_id:
+        raise ValueError("trip_id is required to deploy contract")
 
-    params = algod_client.suggested_params()
+    receiver_address = receiver_address or user_address
+    if not encoding.is_valid_address(receiver_address):
+        raise ValueError("receiver_address must be a valid Algorand address")
+    if deadline is None:
+        raise ValueError("deadline is required to deploy contract")
+
+    params = _suggested_params()
 
     approval = compile_program(approval_program())
     clear = compile_program(clear_program())
@@ -62,21 +146,33 @@ def deploy_contract(user_address):
         on_complete=transaction.OnComplete.NoOpOC,
         approval_program=approval,
         clear_program=clear,
-        global_schema=transaction.StateSchema(6, 2),
+        app_args=[
+            _encode_uint64(budget),
+            _encode_address(receiver_address),
+            str(trip_id).encode("utf-8"),
+            _encode_uint64(deadline),
+            _encode_uint64(APP_ACCOUNT_MIN_BALANCE),
+        ],
+        global_schema=transaction.StateSchema(6, 3),
         local_schema=transaction.StateSchema(0, 0)
     )
 
-    private_key = _get_private_key()
-    signed_txn = txn.sign(private_key)
-
-    tx_id = algod_client.send_transaction(signed_txn)
-    result = transaction.wait_for_confirmation(algod_client, tx_id, 4)
+    create_tx_id, result = _submit_transaction(txn)
 
     app_id = result.get("application-index")
     if not app_id:
         raise RuntimeError("Contract deployed but no application-index returned")
-    print(f"✅ Contract deployed with app_id: {app_id}, tx_id: {tx_id}")
+
+    lock_amount = int(budget) + APP_ACCOUNT_MIN_BALANCE
+    lock_result = lock_funds(app_id, user_address, lock_amount)
+    app_address = lock_result["app_address"]
+
+    print(f"Contract deployed with app_id: {app_id}, tx_id: {create_tx_id}")
     return {
         "app_id": app_id,
-        "tx_id": tx_id
+        "app_address": app_address,
+        "create_tx_id": create_tx_id,
+        "lock_tx_id": lock_result["lock_tx_id"],
+        "lock_amount": lock_amount,
+        "receiver_address": receiver_address,
     }
