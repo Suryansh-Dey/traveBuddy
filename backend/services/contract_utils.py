@@ -30,6 +30,7 @@ def approval_program():
     released_key = Bytes("released")
     receiver_key = Bytes("receiver")
     trip_id_key = Bytes("trip_id")
+    itinerary_hash_key = Bytes("itinerary_hash")
     deadline_key = Bytes("deadline")
     status_key = Bytes("status")
 
@@ -39,6 +40,7 @@ def approval_program():
         App.globalPut(budget_key, Btoi(Txn.application_args[0])),
         App.globalPut(receiver_key, Txn.application_args[1]),
         App.globalPut(trip_id_key, Txn.application_args[2]),
+        App.globalPut(itinerary_hash_key, Bytes("")),
         App.globalPut(deadline_key, Btoi(Txn.application_args[3])),
         App.globalPut(app_reserve_key, Btoi(Txn.application_args[4])),
         App.globalPut(locked_key, Int(0)),
@@ -60,9 +62,19 @@ def approval_program():
         Approve(),
     )
 
+    on_commit_itinerary = Seq(
+        Assert(Txn.sender() == App.globalGet(creator_key)),
+        Assert(Txn.application_args.length() == Int(2)),
+        Assert(App.globalGet(status_key) == Int(1)),
+        Assert(App.globalGet(itinerary_hash_key) == Bytes("")),
+        App.globalPut(itinerary_hash_key, Txn.application_args[1]),
+        Approve(),
+    )
+
     on_release = Seq(
         Assert(Txn.sender() == App.globalGet(creator_key)),
         Assert(App.globalGet(status_key) == Int(1)),
+        Assert(App.globalGet(itinerary_hash_key) != Bytes("")),
         Assert(App.globalGet(locked_key) >= App.globalGet(budget_key) + App.globalGet(app_reserve_key)),
         InnerTxnBuilder.Begin(),
         InnerTxnBuilder.SetFields({
@@ -101,6 +113,7 @@ def approval_program():
         [Txn.application_id() == Int(0), on_create],
         [Txn.on_completion() == OnComplete.NoOp, Cond(
             [Txn.application_args[0] == Bytes("lock"), on_lock],
+            [Txn.application_args[0] == Bytes("commit_itinerary"), on_commit_itinerary],
             [Txn.application_args[0] == Bytes("release"), on_release],
             [Txn.application_args[0] == Bytes("refund"), on_refund],
         )],

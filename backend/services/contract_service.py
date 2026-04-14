@@ -3,6 +3,8 @@ from algosdk.transaction import ApplicationCreateTxn, ApplicationNoOpTxn, Paymen
 from services.algorand_client import algod_client
 from services.contract_utils import approval_program, clear_program, compile_program
 import os
+import hashlib
+import json
 from dotenv import load_dotenv
 load_dotenv()  # Load environment variables from .env file
 
@@ -121,6 +123,27 @@ def refund_funds(app_id, sender):
     return call_app(app_id, sender, ["refund"], fee_multiplier=2)
 
 
+def build_itinerary_hash(trip_id, constraints, components):
+    payload = {
+        "trip_id": str(trip_id),
+        "constraints": constraints,
+        "components": components,
+    }
+    canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def commit_itinerary(app_id, sender, itinerary_hash_hex):
+    if not itinerary_hash_hex:
+        raise ValueError("itinerary_hash_hex is required")
+
+    hash_bytes = bytes.fromhex(itinerary_hash_hex)
+    if len(hash_bytes) != 32:
+        raise ValueError("itinerary_hash_hex must be a 32-byte sha256 hex string")
+
+    return call_app(app_id, sender, ["commit_itinerary", hash_bytes], fee_multiplier=2)
+
+
 def deploy_contract(user_address, budget, trip_id, receiver_address=None, deadline=None):
     if not user_address:
         raise ValueError("user_address is required to deploy contract")
@@ -153,7 +176,7 @@ def deploy_contract(user_address, budget, trip_id, receiver_address=None, deadli
             _encode_uint64(deadline),
             _encode_uint64(APP_ACCOUNT_MIN_BALANCE),
         ],
-        global_schema=transaction.StateSchema(6, 3),
+        global_schema=transaction.StateSchema(6, 4),
         local_schema=transaction.StateSchema(0, 0)
     )
 
@@ -168,6 +191,9 @@ def deploy_contract(user_address, budget, trip_id, receiver_address=None, deadli
     app_address = lock_result["app_address"]
 
     print(f"Contract deployed with app_id: {app_id}, tx_id: {create_tx_id}")
+    print(
+        f"On-chain trip identifiers -> trip_id: {trip_id}, app_id: {app_id}, app_address: {app_address}"
+    )
     return {
         "app_id": app_id,
         "app_address": app_address,

@@ -54,6 +54,13 @@ async def create_trip(data: dict):
         )
         #contract = {"app_id": 12345}
 
+        print(
+            "Trip created on-chain -> "
+            f"trip_id: {constraints['trip_id']}, app_id: {contract['app_id']}, "
+            f"app_address: {contract['app_address']}, create_tx_id: {contract['create_tx_id']}, "
+            f"lock_tx_id: {contract['lock_tx_id']}"
+        )
+
         # 🔹 Step 5: Store state
         TRIPS[constraints["trip_id"]] = {
             "constraints": constraints,
@@ -66,6 +73,8 @@ async def create_trip(data: dict):
                 "lock_amount": contract["lock_amount"],
                 "user_address": user_address,
                 "receiver_address": contract["receiver_address"],
+                "itinerary_hash": None,
+                "itinerary_commit_tx_id": None,
             }
         }
 
@@ -87,6 +96,8 @@ async def create_trip(data: dict):
                 "lock_amount": contract["lock_amount"],
                 "user_address": user_address,
                 "receiver_address": contract["receiver_address"],
+                "itinerary_hash": None,
+                "itinerary_commit_tx_id": None,
             }
         }
 

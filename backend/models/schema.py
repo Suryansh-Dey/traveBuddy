@@ -26,6 +26,8 @@ class ContractState(BaseModel):
     lock_amount: int
     user_address: str
     receiver_address: str
+    itinerary_hash: Optional[str] = None
+    itinerary_commit_tx_id: Optional[str] = None
     release_tx_id: Optional[str] = None
 
 class TripState(BaseModel):
