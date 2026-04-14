@@ -29,6 +29,7 @@ export default function Dashboard() {
     const [functionCalls, setFunctionCalls] = useState<string[]>([]);
     const hasInitiated = useRef(false);
     const alreadyBookedRef = useRef(false);
+    const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
     // Make proxy / backend request to start trip
     const startTrip = useCallback(async (prompt: string, address: string = "dummy") => {
@@ -61,7 +62,10 @@ export default function Dashboard() {
 
     // Polling loop
     const pollTrip = useCallback(async (currentTripId: string) => {
-        const interval = setInterval(async () => {
+        if (pollingIntervalRef.current) {
+            clearInterval(pollingIntervalRef.current);
+        }
+        pollingIntervalRef.current = setInterval(async () => {
             try {
                 const res = await fetch(`/api/proxy/status/${currentTripId}`);
                 if (!res.ok) return;
@@ -106,7 +110,7 @@ export default function Dashboard() {
                     alreadyBookedRef.current = true;
                     setIsPolling(false);
                     setFunctionCalls([]);
-                    clearInterval(interval);
+                    if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current);
                     
                     let componentsStr = "";
                     if (data.booking && data.booking.components) {
@@ -120,7 +124,7 @@ export default function Dashboard() {
                 } else if (data.status === "BOOKED") {
                     setIsPolling(false);
                     setFunctionCalls([]);
-                    clearInterval(interval);
+                    if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current);
                 }
             } catch (e) {
                 console.error("Polling error", e);
