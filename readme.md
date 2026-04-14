@@ -1,9 +1,202 @@
 # TraveBuddy
 
-Ever felt planning the trips exhaustive? Finding the best deals, entering you card details, waiting and filling OTP, and what not? Ever wondered if there was an AI agent simply waiting for your single click?
+Ever felt planning trips exhausting? Finding the best deals, entering card details, waiting for OTPs, and navigating countless bookings? Ever wondered if there was an AI agent ready to handle it all with a single click?
 
-TraveBuddy - a blockchain based and AI powered travel booking platform. Top notch can expose their APIs to participate in our platform. Our model would search for the best deals based on the travelling plans and level of comfort.
+Welcome to **TraveBuddy** - a blockchain-powered and AI-driven travel booking platform that reimagines how travelers book trips.
 
-It's not simply a GPT - something unidirection - through the power of langgraph, AI enquires you like a real travel agent trying to know your preference. Based on your preference and the trend analysis model, the decision engine tries to book at the best possible timing. 
+## What is TraveBuddy?
 
-The funds are locked by the smart contract during the deposition of request itself. Once the bookings are verified to handle all the user given conditions - funds are released
+TraveBuddy combines intelligent AI agents with blockchain technology to create a trustless, transparent, and efficient travel booking experience. Our platform connects travelers with top-tier travel providers through a unified interface while ensuring funds are protected through smart contracts.
+
+Unlike traditional booking platforms, TraveBuddy doesn't just search—it converses. Through the power of AI and LangGraph, our intelligent agent engages with you like a real travel agent, understanding your preferences, budget constraints, travel dates, and preferred modes of transport.
+
+## Key Features
+
+### AI-Powered Trip Planning
+
+Our intelligent assistant learns your preferences through natural conversation:
+- Discovers your destination preferences, budget, and timeline
+- Analyzes travel trends to identify optimal booking times
+- Continuously monitors prices and availability across partner APIs
+- Makes informed booking decisions based on your constraints
+
+### Blockchain-Secured Transactions
+
+Algorand blockchain integration ensures transparency and security:
+- **Fund Protection**: Funds are locked in smart contracts at trip creation—neither you nor the platform can access them until conditions are met
+- **Trustless Execution**: Smart contracts automatically verify bookings meet all user-specified conditions before releasing funds
+- **Transparent Auditing**: All transactions are immutable and verifiable on the blockchain
+- **Reduced Fraud Risk**: No centralized party controls your funds; execution is governed by code
+
+### Real-Time Price Monitoring
+
+Our decision engine continuously monitors prices and executes bookings at optimal times:
+- Tracks price history across multiple providers
+- Uses trend analysis to predict booking windows
+- Executes transactions automatically when conditions are optimal
+- Keeps you informed of all decisions and actions
+
+## Technology Stack
+
+### Backend
+- **Runtime**: Python with FastAPI
+- **AI & Parsing**: Google Generative AI for natural language processing
+- **Blockchain**: Algorand (py-algorand-sdk, PyTeal for smart contracts)
+- **Async Processing**: asyncio for non-blocking job scheduling
+- **Smart Contract Language**: PyTeal for contract logic
+
+### Frontend
+- **Framework**: Next.js with TypeScript
+- **Styling**: Tailwind CSS
+- **State Management**: React Context API
+- **API Integration**: RESTful endpoints to backend
+
+## Architecture Overview
+
+### Backend Services
+
+The backend follows a service-oriented architecture with clear separation of concerns:
+
+- **ai_parser.py**: Parses user travel requirements into structured constraints using LLM
+- **constraint_service.py**: Normalizes and validates trip constraints
+- **scheduler.py**: Async monitoring loop that triggers booking decisions at optimal times
+- **decision_engine.py**: Determines when to execute bookings based on price trends
+- **api_fetcher.py**: Aggregates prices from partner APIs in real-time
+- **booking_executor.py**: Executes bookings through partner integrations
+- **contract_service.py**: Deploys and manages smart contracts for fund protection
+- **algorand_client.py**: Client for Algorand blockchain interaction
+
+Entry point: `backend/main.py` with route orchestration through `backend/routes/trip.py`.
+
+### The Algorand Smart Contract Layer
+
+At the heart of TraveBuddy's trust model is the Algorand blockchain:
+
+1. **Trip Creation**: When you create a trip request, your specified budget is locked in a smart contract. Your funds cannot be accessed by anyone.
+
+2. **Booking Monitoring**: Our decision engine monitors prices and travel availability in real-time.
+
+3. **Automated Execution**: Once price and availability conditions are met, a booking is executed through partner APIs.
+
+4. **Smart Contract Verification**: The smart contract verifies that the executed booking satisfies all your original constraints (destination, dates, budget, transport modes).
+
+5. **Fund Release**: Only after verification passes do your locked funds get transferred to the booking provider. If conditions cannot be met, funds are returned to you.
+
+This design eliminates the need to trust TraveBuddy—you only trust the immutable logic of the smart contract.
+
+## Getting Started
+
+### Prerequisites
+
+- Python 3.8+
+- Node.js 18+
+- Algorand node access (testnet or local node)
+- API keys for travel providers
+
+### Installation
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/RSAgr/traveBuddy.git
+   cd traveBuddy
+   ```
+
+2. Set up the Python backend:
+   ```bash
+   cd backend
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   pip install -r requirements.txt
+   ```
+
+3. Configure environment variables:
+   Create a `.env` file in the backend directory with:
+   ```
+   ALGOD_ADDRESS=<your-algorand-node-address>
+   ALGOD_TOKEN=<your-algorand-node-token>
+   USER_MNEMONIC=<your-algorand-account-mnemonic>
+   GEMINI_API_KEY=<your-google-generative-ai-key>
+   ```
+
+   Create a `.env.local` file in the frontend directory with:
+   ```
+   NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=<your-google-maps-api-key>
+   ```
+
+4. Set up the Next.js frontend:
+   ```bash
+   cd frontend
+   npm install
+   ```
+
+### Running Locally
+
+1. Start the backend server:
+   ```bash
+   cd backend
+   uvicorn main:app --reload
+   ```
+   The API will be available at `http://localhost:8000`.
+
+2. Start the frontend development server:
+   ```bash
+   cd frontend
+   npm run dev
+   ```
+   The application will be available at `http://localhost:3000`.
+
+## How It Works
+
+1. **User Input**: You describe your travel plans through natural conversation
+2. **Constraint Parsing**: AI extracts structured trip requirements (destination, budget, dates, transport)
+3. **Fund Locking**: Your budget is locked in a smart contract on Algorand
+4. **Continuous Monitoring**: Scheduler monitors prices 24/7
+5. **Optimal Booking**: Decision engine executes booking when conditions are ideal
+6. **Contract Verification**: Smart contract validates booking meets all constraints
+7. **Fund Transfer**: Funds are released only after verification succeeds
+
+## Why Algorand?
+
+Algorand was chosen for TraveBuddy because of:
+
+- **Pure Proof of Stake**: Energy-efficient without proof-of-work wastage
+- **Deterministic Finality**: Transactions are final instantly—no forks or rollbacks
+- **High Throughput**: Capable of processing thousands of transactions per second
+- **Low Latency**: Block times of ~4 seconds enable responsive booking execution
+- **Affordable**: Minimal transaction fees make frequent price checks economical
+- **Scalability**: Can handle volume growth without congestion
+- **PyTeal Support**: Native smart contract framework enabling complex booking logic
+
+## Project Status
+
+This repository currently has no automated test suite. The typical local development flow is:
+- Install dependencies as shown above
+- Start the API server manually
+- Test through the frontend or API directly
+
+Future plans include comprehensive test coverage with pytest.
+
+## Code Style & Architecture Guidelines
+
+- Keep backend services small and single-purpose (see existing services pattern)
+- Prefer functional service code over classes unless stateful behavior is required
+- Place API-layer validation in route handlers; business logic in services
+- Use Pydantic models from `backend/models/schema.py` for typed structures
+- Maintain async style for long-running workflows using asyncio
+- Treat contract deployment as environment-dependent
+
+## Contributing
+
+Contributions are welcome. Please ensure:
+- Code follows the existing service-oriented architecture
+- Smart contract changes are thoroughly tested
+- Environment variables are never committed; use `.env` files
+- Async patterns remain non-blocking and resilient
+
+## License
+
+This project is open source under the MIT License. See the LICENSE file for details.
+
+## Contact
+
+For questions or feedback about TraveBuddy, please open an issue on GitHub.
