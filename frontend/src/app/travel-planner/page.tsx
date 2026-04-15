@@ -117,7 +117,13 @@ export default function Dashboard() {
                         const formatted = data.booking.components.map((c: any) => 
                             `${c.mode === 'hotel' ? 'Hotel' : c.mode === 'flight' ? 'Flight' : 'Train'}: ₹${c.price}`
                         ).join(", ");
-                        componentsStr = `\n\n**Booked Details**: ${formatted}`;
+                        
+                        let txDetails = "";
+                        if (data.contract) {
+                            txDetails = `\n**App ID**: ${data.contract.app_id}\n**Transaction ID**: ${data.contract.create_tx_id}`;
+                        }
+                        
+                        componentsStr = `\n\n**Booked Details**: ${formatted}${txDetails}`;
                     }
 
                     addMessage({ role: "assistant", text: `✅ I have executed the booking successfully via blockchain contract!${componentsStr}` });
