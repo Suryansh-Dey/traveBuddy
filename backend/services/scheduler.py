@@ -13,6 +13,7 @@ async def run_trip(trip_id):
     PRICE_HISTORY[trip_id] = []
 
     while True:
+        await asyncio.sleep(1)  # slight delay to prevent tight loop on startup
         trip = TRIPS[trip_id]
         constraints = trip["constraints"]
 
@@ -46,4 +47,4 @@ async def run_trip(trip_id):
                 )
                 break
 
-        await asyncio.sleep(5)  # polling interval
+        await asyncio.sleep(8)  # polling interval
